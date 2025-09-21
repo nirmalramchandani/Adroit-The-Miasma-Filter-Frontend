@@ -25,13 +25,17 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 
+interface Window {
+  webkitAudioContext: typeof AudioContext;
+}
+
 // --- SVG Icons ---
 
 const videoConstraints = { width: 640, height: 480, facingMode: "user" };
 
-const InfoIcon = (props) => (
+const InfoIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
-    xmlns="http://www.w.org/2000/svg"
+    xmlns="http://www.w3.org/2000/svg"
     width="24"
     height="24"
     viewBox="1 1 22 22"
@@ -49,7 +53,8 @@ const InfoIcon = (props) => (
   </svg>
 );
 
-const CheckCircleIcon = (props) => (
+// Corrected CheckCircleIcon component
+const CheckCircleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="24"
@@ -68,7 +73,8 @@ const CheckCircleIcon = (props) => (
   </svg>
 );
 
-const XCircleIcon = (props) => (
+// Corrected XCircleIcon component
+const XCircleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="24"
@@ -128,33 +134,41 @@ const WS_URL = "ws://52.71.164.10:8080:8080/ws/";
 const USER_AUDIO_SAMPLE_RATE = 16000;
 const AI_SAMPLE_RATE = 24000;
 
+interface Notification {
+  id: number;
+  timestamp: string;
+  title: string;
+  content: string;
+  severity: "success" | "error" | "warning" | "info";
+}
+
 export default function HomePage() {
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false); // Re-enabled for the new flow
-  const [isVideoOn, setIsVideoOn] = useState(true);
-  const [isAudioOn, setIsAudioOn] = useState(true);
-  const [viewerCount, setViewerCount] = useState(1247);
-  const [errorMsg, setErrorMsg] = useState(null);
-  const [notifications, setNotifications] = useState([]);
-  const [videoReady, setVideoReady] = useState(false);
-  const [showWelcomeOverlay, setShowWelcomeOverlay] = useState(true);
-  const [showTrendingTopics, setShowTrendingTopics] = useState(false);
-  const [overlayNotification, setOverlayNotification] = useState(null);
-  const [typedText, setTypedText] = useState("");
+  const [isStreaming, setIsStreaming] = useState<boolean>(false);
+  const [isConnecting, setIsConnecting] = useState<boolean>(false); // Re-enabled for the new flow
+  const [isVideoOn, setIsVideoOn] = useState<boolean>(true);
+  const [isAudioOn, setIsAudioOn] = useState<boolean>(true);
+  const [viewerCount, setViewerCount] = useState<number>(1247);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [videoReady, setVideoReady] = useState<boolean>(false);
+  const [showWelcomeOverlay, setShowWelcomeOverlay] = useState<boolean>(true);
+  const [showTrendingTopics, setShowTrendingTopics] = useState<boolean>(false);
+  const [overlayNotification, setOverlayNotification] = useState<Notification | null>(null);
+  const [typedText, setTypedText] = useState<string>("");
 
-  const webcamRef = useRef(null);
-  const canvasRef = useRef(null);
-  const webSocket = useRef(null);
-  const mediaStream = useRef(null);
-  const streamVideoInterval = useRef(null);
+  const webcamRef = useRef<Webcam | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const webSocket = useRef<WebSocket | null>(null);
+  const mediaStream = useRef<MediaStream | null>(null);
+  const streamVideoInterval = useRef<NodeJS.Timeout | null>(null);
 
-  const userAudioContext = useRef(null);
-  const userAudioProcessor = useRef(null);
-  const aiAudioContext = useRef(null);
-  const aiAudioQueue = useRef([]);
-  const isAiAudioPlaying = useRef(false);
+  const userAudioContext = useRef<AudioContext | null>(null);
+  const userAudioProcessor = useRef<ScriptProcessorNode | null>(null);
+  const aiAudioContext = useRef<AudioContext | null>(null);
+  const aiAudioQueue = useRef<Int16Array[]>([]);
+  const isAiAudioPlaying = useRef<boolean>(false);
 
-  const [showIntroVideo, setShowIntroVideo] = useState(false);
+  const [showIntroVideo, setShowIntroVideo] = useState<boolean>(false);
   const introVideoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
@@ -188,7 +202,7 @@ export default function HomePage() {
 
   const handleSkipIntro = () => setShowWelcomeOverlay(false);
 
-  const addNotification = useCallback((notification) => {
+  const addNotification = useCallback((notification: Omit<Notification, "id" | "timestamp">) => {
     const newNotification = {
       id: Date.now(),
       timestamp: new Date().toLocaleTimeString([], {
@@ -201,11 +215,11 @@ export default function HomePage() {
     setOverlayNotification(newNotification);
   }, []);
 
-  const removeNotification = useCallback((id) => {
+  const removeNotification = useCallback((id: number) => {
     setNotifications((prev) => prev.filter((notif) => notif.id !== id));
   }, []);
 
-  const getNotificationStyle = (severity) => {
+  const getNotificationStyle = (severity: Notification['severity']) => {
     switch (severity) {
       case "success":
         return "bg-gradient-to-br from-green-900/90 from-30% to-slate-800/100 border-[#059669]/50";
@@ -218,7 +232,7 @@ export default function HomePage() {
     }
   };
 
-  const getNotificationIcon = (severity) => {
+  const getNotificationIcon = (severity: Notification['severity']) => {
     switch (severity) {
       case "success":
         return <CheckCircleIcon className="h-5 w-5 text-[#059669]" />;
@@ -255,7 +269,7 @@ export default function HomePage() {
     try {
       if (!mediaStream.current) return;
       userAudioContext.current = new (window.AudioContext ||
-        window.webkitAudioContext)({ sampleRate: USER_AUDIO_SAMPLE_RATE });
+        window.AudioContext)({ sampleRate: USER_AUDIO_SAMPLE_RATE });
       const source = userAudioContext.current.createMediaStreamSource(
         mediaStream.current
       );
@@ -263,7 +277,7 @@ export default function HomePage() {
         userAudioContext.current.createScriptProcessor(4096, 1, 1);
       source.connect(userAudioProcessor.current);
       userAudioProcessor.current.connect(userAudioContext.current.destination);
-      userAudioProcessor.current.onaudioprocess = (event) => {
+      userAudioProcessor.current.onaudioprocess = (event: AudioProcessingEvent) => {
         if (webSocket.current?.readyState === WebSocket.OPEN) {
           const float32Data = event.inputBuffer.getChannelData(0);
           const int16Data = new Int16Array(float32Data.length);
@@ -272,7 +286,7 @@ export default function HomePage() {
             int16Data[i] = s < 0 ? s * 32768 : s * 32767;
           }
           const base64Data = btoa(
-            String.fromCharCode.apply(null, new Uint8Array(int16Data.buffer))
+            String.fromCharCode.apply(null, Array.from(new Uint8Array(int16Data.buffer)))
           );
           webSocket.current.send(
             JSON.stringify({ type: "audio", data: base64Data })
@@ -314,7 +328,7 @@ export default function HomePage() {
   }, []);
 
   const handleAiAudio = useCallback(
-    (base64Data) => {
+    (base64Data: string) => {
       try {
         const rawAudio = atob(base64Data);
         const rawLength = rawAudio.length;
@@ -405,7 +419,7 @@ export default function HomePage() {
 
         // Set up the rest of the stream in the background
         aiAudioContext.current = new (window.AudioContext ||
-          window.webkitAudioContext)({ sampleRate: AI_SAMPLE_RATE });
+          window.AudioContext)({ sampleRate: AI_SAMPLE_RATE });
         if (aiAudioContext.current.state === "suspended")
           aiAudioContext.current.resume();
 
@@ -420,7 +434,7 @@ export default function HomePage() {
         });
       };
 
-      webSocket.current.onmessage = (event) => {
+      webSocket.current.onmessage = (event: MessageEvent) => {
         try {
           const msg = JSON.parse(event.data);
           if (msg?.type === "audio") handleAiAudio(msg.data);
@@ -437,12 +451,12 @@ export default function HomePage() {
         }
       };
 
-      webSocket.current.onerror = (e) => {
+      webSocket.current.onerror = (e: Event) => {
         setErrorMsg("WebSocket connection failed.");
         stopStreaming();
       };
 
-      webSocket.current.onclose = (e) => {
+      webSocket.current.onclose = (e: CloseEvent) => {
         if (e.code !== 1000) {
           addNotification({
             title: "Connection Lost",
@@ -637,7 +651,7 @@ export default function HomePage() {
                     className="w-full h-full object-cover"
                     onUserMedia={() => setVideoReady(true)}
                     onUserMediaError={(err) =>
-                      setErrorMsg("Webcam error: " + err.message)
+                      setErrorMsg("Webcam error ")
                     }
                   />
                   <canvas ref={canvasRef} className="hidden" />
@@ -668,7 +682,7 @@ export default function HomePage() {
                       Stream Offline
                     </p>
                     <p className="text-[#9CA3AF] text-sm">
-                      Click "Start Stream" to go live
+                      Click &rdquo;Start Stream&rdquo; to go live
                     </p>
                     {errorMsg && (
                       <div className="mt-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg max-w-md">
