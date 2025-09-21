@@ -130,7 +130,7 @@ const recommendedTopics = [
   "Sustainable Energy Solutions",
 ];
 
-const WS_URL = "wss://f7448ce361da.ngrok-free.app/ws/";
+const WS_URL = "ws://f7448ce361da.ngrok-free.app/ws/";
 const USER_AUDIO_SAMPLE_RATE = 16000;
 const AI_SAMPLE_RATE = 24000;
 
