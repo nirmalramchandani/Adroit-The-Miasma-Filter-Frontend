@@ -1,5 +1,11 @@
 "use client";
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from "react";
 // This assumes you have a Navbar component in this location.
 import Navbar from "@/components/Navbar";
 import Webcam from "react-webcam";
@@ -130,11 +136,12 @@ const recommendedTopics = [
   "Sustainable Energy Solutions",
 ];
 
-const WS_URL = "wss://50.19.176.180:8080/ws/";
+const WS_URL = "wss://buildownstuff.cloud/ws/";
 const USER_AUDIO_SAMPLE_RATE = 16000;
 const AI_SAMPLE_RATE = 24000;
 
 interface Notification {
+  action: string;
   id: number;
   timestamp: string;
   title: string;
@@ -153,7 +160,8 @@ export default function HomePage() {
   const [videoReady, setVideoReady] = useState<boolean>(false);
   const [showWelcomeOverlay, setShowWelcomeOverlay] = useState<boolean>(true);
   const [showTrendingTopics, setShowTrendingTopics] = useState<boolean>(false);
-  const [overlayNotification, setOverlayNotification] = useState<Notification | null>(null);
+  const [overlayNotification, setOverlayNotification] =
+    useState<Notification | null>(null);
   const [typedText, setTypedText] = useState<string>("");
 
   const webcamRef = useRef<Webcam | null>(null);
@@ -171,6 +179,12 @@ export default function HomePage() {
   const [showIntroVideo, setShowIntroVideo] = useState<boolean>(false);
   const introVideoRef = useRef<HTMLVideoElement | null>(null);
 
+  // --- FIX STARTS HERE ---
+  const onClose = () => {
+    setShowWelcomeOverlay(false);
+  };
+  // --- FIX ENDS HERE ---
+
   useEffect(() => {
     const welcomeTimer = setTimeout(() => {
       setShowTrendingTopics(true);
@@ -179,7 +193,7 @@ export default function HomePage() {
         2000
       );
       return () => clearTimeout(trendingTimer);
-    }, 15000);
+    }, 10000);
     return () => clearTimeout(welcomeTimer);
   }, []);
 
@@ -202,24 +216,27 @@ export default function HomePage() {
 
   const handleSkipIntro = () => setShowWelcomeOverlay(false);
 
-  const addNotification = useCallback((notification: Omit<Notification, "id" | "timestamp">) => {
-    const newNotification = {
-      id: Date.now(),
-      timestamp: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      ...notification,
-    };
-    setNotifications((prev) => [newNotification, ...prev.slice(0, 19)]);
-    setOverlayNotification(newNotification);
-  }, []);
+  const addNotification = useCallback(
+    (notification: Omit<Notification, "id" | "timestamp">) => {
+      const newNotification = {
+        id: Date.now(),
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        ...notification,
+      };
+      setNotifications((prev) => [newNotification, ...prev.slice(0, 19)]);
+      setOverlayNotification(newNotification);
+    },
+    []
+  );
 
   const removeNotification = useCallback((id: number) => {
     setNotifications((prev) => prev.filter((notif) => notif.id !== id));
   }, []);
 
-  const getNotificationStyle = (severity: Notification['severity']) => {
+  const getNotificationStyle = (severity: Notification["severity"]) => {
     switch (severity) {
       case "success":
         return "bg-gradient-to-br from-green-900/90 from-30% to-slate-800/100 border-[#059669]/50";
@@ -232,7 +249,7 @@ export default function HomePage() {
     }
   };
 
-  const getNotificationIcon = (severity: Notification['severity']) => {
+  const getNotificationIcon = (severity: Notification["severity"]) => {
     switch (severity) {
       case "success":
         return <CheckCircleIcon className="h-5 w-5 text-[#059669]" />;
@@ -277,7 +294,9 @@ export default function HomePage() {
         userAudioContext.current.createScriptProcessor(4096, 1, 1);
       source.connect(userAudioProcessor.current);
       userAudioProcessor.current.connect(userAudioContext.current.destination);
-      userAudioProcessor.current.onaudioprocess = (event: AudioProcessingEvent) => {
+      userAudioProcessor.current.onaudioprocess = (
+        event: AudioProcessingEvent
+      ) => {
         if (webSocket.current?.readyState === WebSocket.OPEN) {
           const float32Data = event.inputBuffer.getChannelData(0);
           const int16Data = new Int16Array(float32Data.length);
@@ -286,7 +305,10 @@ export default function HomePage() {
             int16Data[i] = s < 0 ? s * 32768 : s * 32767;
           }
           const base64Data = btoa(
-            String.fromCharCode.apply(null, Array.from(new Uint8Array(int16Data.buffer)))
+            String.fromCharCode.apply(
+              null,
+              Array.from(new Uint8Array(int16Data.buffer))
+            )
           );
           webSocket.current.send(
             JSON.stringify({ type: "audio", data: base64Data })
@@ -431,6 +453,7 @@ export default function HomePage() {
           title: "Stream Started",
           content: "You are now live. The Miasma filter is active.",
           severity: "success",
+          action: "",
         });
       };
 
@@ -443,6 +466,7 @@ export default function HomePage() {
               title: msg.title || "Update",
               content: msg.content || msg.data,
               severity: msg.severity || "info",
+              action: "",
             });
           else if (msg?.type === "error")
             setErrorMsg(msg.error || "Server error");
@@ -462,6 +486,7 @@ export default function HomePage() {
             title: "Connection Lost",
             content: "Connection was closed unexpectedly.",
             severity: "warning",
+            action: "",
           });
         }
         stopStreaming();
@@ -529,40 +554,74 @@ export default function HomePage() {
     <div className="relative min-h-screen bg-[#0F1419] text-[#E2E8F0]">
       {showWelcomeOverlay && (
         <>
-          <div className="fixed inset-0 z-50 bg-black opacity-50" />
+          {/* Full-screen backdrop with a blur and semi-transparent background */}
+          <div className="fixed inset-0 z-40 bg-black/70 backdrop-blur-md" />
+
+          {/* Main Modal Container */}
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="relative w-full max-w-lg mx-auto rounded-2xl bg-[#161d25]/90 p-8 sm:p-12 border border-[#20293A]/70 shadow-2xl">
+            {/* This is the main content box. We set its max height and width to control its size */}
+            <div className="relative w-[90%] md:w-[80%] max-w-2xl mx-auto rounded-2xl bg-[#161d25]/90 p-8 sm:p-12 border border-[#20293A]/70 shadow-2xl backdrop-blur-sm transform transition-all duration-300 scale-95 opacity-0 animate-scale-in">
+              {/* Dynamic Content based on state */}
               {!showTrendingTopics ? (
-                <div className="space-y-6 text-center">
-                  <h1 className="text-4xl sm:text-5xl font-extrabold text-white">
-                    Welcome to the Stream!
+                <div className="space-y-8 text-center raleway">
+                  <h1 className="text-4xl sm:text-5xl font-extrabold text-white leading-tight ">
+                    Welcome to the Stream
                   </h1>
                   <p className="text-lg sm:text-xl text-slate-300">
-                    Click{" "}
-                    <span className="bg-blue-700/20 text-blue-300 px-2 py-1 rounded-md font-semibold">
-                      Start Streaming
-                    </span>{" "}
-                    to begin.
+                    Get ready to begin.
                   </p>
-                  <div className="bg-[#232b37]/80 rounded-xl border border-[#334155]/40 px-5 py-4 text-left shadow-inner">
-                    <p className="font-semibold mb-2 text-white">
-                      How to use the Miasma filter:
-                    </p>
-                    <ul className="list-disc list-inside text-slate-300 space-y-2 text-base">
-                      <li>
-                        After starting your stream, state five facts (True or
-                        False) of your choice.
+
+                  {/* Guide Section */}
+                  <div className="bg-[#232b37]/80 rounded-xl border border-[#334155]/40 px-6 py-5 text-left shadow-inner">
+                    <h3 className="font-semibold text-white mb-3 text-lg flex items-center gap-2">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="lucide lucide-lightbulb"
+                      >
+                        <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1.5.6 2.8 1.5 3.5.8.7 1.3 1.5 1.5 2.5" />
+                        <path d="M9 18h6" />
+                        <path d="M10 22h4" />
+                        <path d="M10 18a2 2 0 1 1 4 0" />
+                      </svg>
+                      <span>How the Miasma Filter Works</span>
+                    </h3>
+                    <ul className="list-inside text-slate-400 space-y-3 text-base">
+                      <li className="flex items-start">
+                        <span className="inline-block mr-2 text-blue-400 font-bold">
+                          •
+                        </span>
+                        <span>
+                          After you start your stream, state a series of facts
+                          (True or False).
+                        </span>
                       </li>
-                      <li>
-                        Miasma will analyze each statement and mark it as{" "}
-                        <span className="text-green-400 font-semibold">
-                          True
-                        </span>{" "}
-                        or{" "}
-                        <span className="text-red-400 font-semibold">
-                          False
-                        </span>{" "}
-                        after validation.
+                      <li className="flex items-start">
+                        <span className="inline-block mr-2 text-blue-400 font-bold">
+                          •
+                        </span>
+                        <span>
+                          Miasma will analyze and validate each statement in
+                          real-time.
+                        </span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="inline-block mr-2 text-blue-400 font-bold">
+                          •
+                        </span>
+                        <span>
+                          Statements will be automatically marked{" "}
+                          <strong className="text-green-400">True</strong> or{" "}
+                          <strong className="text-red-400">False</strong> on
+                          your screen for your audience.
+                        </span>
                       </li>
                     </ul>
                   </div>
@@ -573,13 +632,14 @@ export default function HomePage() {
                     Recommended Topics
                   </h2>
                   <p className="text-lg text-slate-300">
-                    Try streaming about these trending topics:
+                    Try streaming about these trending topics to engage your
+                    audience:
                   </p>
                   <div className="flex flex-wrap gap-3">
                     {recommendedTopics.map((topic, idx) => (
                       <span
                         key={idx}
-                        className="bg-[#223045] text-blue-100 px-4 py-2 rounded-full text-sm font-medium"
+                        className="bg-[#223045] text-blue-100 px-4 py-2 rounded-full text-sm font-medium hover:bg-[#2e405a] transition-colors"
                       >
                         {topic}
                       </span>
@@ -587,14 +647,87 @@ export default function HomePage() {
                   </div>
                 </div>
               )}
+
+              {/* Close button with enhanced styling */}
+              <button
+                onClick={onClose}
+                className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors duration-200"
+                aria-label="Close"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="lucide lucide-x"
+                >
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
             </div>
           </div>
+
+          {/* Button to start stream, with pulsing effect */}
           <button
-            onClick={handleSkipIntro}
-            className="fixed z-[60] bottom-10 right-10 bg-[#232b37]/80 hover:bg-[#334155]/80 text-sm px-4 py-2 rounded-full text-slate-300 shadow-lg border border-[#556075]/20"
+            onClick={startStreaming}
+            className="fixed z-[60] bottom-10 left-1/2 -translate-x-1/2 px-8 py-4 text-lg font-bold rounded-full bg-blue-600 text-white shadow-lg border border-blue-500 hover:bg-blue-700 transition-colors duration-300 animate-pulse-grow"
           >
-            Skip
+            Start Streaming
           </button>
+
+          {/* Button to skip intro, with refined style */}
+          {/* <button
+            onClick={handleSkipIntro}
+            className="fixed z-[60] bottom-6 right-6 px-4 py-2 text-sm rounded-full text-slate-400 bg-transparent border border-slate-600/50 hover:bg-slate-700/30 transition-colors"
+          >
+            Skip Intro
+          </button> */}
+
+          {/* Custom CSS for animations and styles */}
+          <style jsx>{`
+            @import url("https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100..900;1,100..900&display=swap");
+
+            .raleway-<uniquifier > {
+              font-family: "Raleway", sans-serif;
+              font-optical-sizing: auto;
+              font-weight: <weight>;
+              font-style: normal;
+            }
+
+            @keyframes pulse-grow {
+              0%,
+              100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+              }
+              50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+              }
+            }
+            .animate-pulse-grow {
+              animation: pulse-grow 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+            }
+
+            @keyframes scale-in {
+              from {
+                transform: scale(0.95);
+                opacity: 0;
+              }
+              to {
+                transform: scale(1);
+                opacity: 1;
+              }
+            }
+            .animate-scale-in {
+              animation: scale-in 0.3s ease-out forwards;
+            }
+          `}</style>
         </>
       )}
 
@@ -650,9 +783,7 @@ export default function HomePage() {
                     videoConstraints={videoConstraints}
                     className="w-full h-full object-cover"
                     onUserMedia={() => setVideoReady(true)}
-                    onUserMediaError={(err) =>
-                      setErrorMsg("Webcam error ")
-                    }
+                    onUserMediaError={(err) => setErrorMsg("Webcam error ")}
                   />
                   <canvas ref={canvasRef} className="hidden" />
                   {!isVideoOn && (
@@ -697,8 +828,26 @@ export default function HomePage() {
 
               {overlayNotification && !showIntroVideo && (
                 <div className="absolute inset-0 z-30 flex items-center justify-center p-8 animate-fadeIn">
-                  <div className="text-center max-w-xl bg-black/50 px-4 py-2 rounded-lg">
-                    <p className="text-xl md:text-2xl text-red-500 font-bold drop-shadow-lg">
+                  <div
+                    className={`
+        text-center max-w-xl px-4 py-2 rounded-lg drop-shadow-lg
+        ${
+          overlayNotification.severity === "success"
+            ? "bg-white/90" // White background for true notifications
+            : "bg-black/50" // Black background for false notifications
+        }
+      `}
+                  >
+                    <p
+                      className={`
+          text-xl md:text-2xl font-bold drop-shadow-lg
+          ${
+            overlayNotification.severity === "success"
+              ? "text-green-600" // Green text for true notifications
+              : "text-red-500" // Red text for false notifications
+          }
+        `}
+                    >
                       {typedText}
                     </p>
                   </div>
@@ -876,7 +1025,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="lg:col-span-1 xl:col-span-3 flex flex-col h-full">
-            <div className="bg-[#1A202C] mb-4 flex flex-col flex-1 min-h-[50vh] max-h-[80vh] lg:max-h-[calc(100vh-16rem)]">
+            <div className="bg-[#1A202C] mb-4 flex flex-col flex-1 min-h-[50vh] max-h-[80vh] lg:max-h-[calc(100vh-16rem)] animate-outter-pulse-glow ">
               <style
                 dangerouslySetInnerHTML={{
                   __html: `
@@ -902,6 +1051,34 @@ export default function HomePage() {
         
         .animate-inner-pulse-glow {
           animation: innerPulseGlow 2.5s ease-in-out infinite;
+        }
+
+        @keyframes outterPulseGlow {
+          0%, 100% {
+            box-shadow: 0 0 4px rgba(255, 0, 0, 0.4);
+          }
+
+          50% {
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.7);
+          }
+        }
+        
+        .animate-outter-pulse-glow {
+          animation: outterPulseGlow 2.5s ease-in-out infinite;
+        }
+
+        @keyframes outterPulseGlowTrending {
+          0%, 100% {
+            box-shadow: 0 0 4px rgba(0, 255, 0, 0.4);
+          }
+
+          50% {
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.7);
+          }
+        }
+        
+        .animate-outter-pulse-glow-trending {
+          animation: outterPulseGlowTrending 2.5s ease-in-out infinite;
         }
         /* --- END OF ADDED CODE --- */
       `,
@@ -953,6 +1130,11 @@ export default function HomePage() {
                               {item.timestamp}
                             </p>
                           </div>
+                          <div className="flex justify-between items-center w-full">
+                            <p className="text-xs text-gray-400">
+                              {item.action}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -960,7 +1142,7 @@ export default function HomePage() {
                 )}
               </div>
             </div>
-            <div className="bg-[#1A202C] flex-1 overflow-auto no-scrollbar">
+            <div className="bg-[#1A202C] flex-1 overflow-auto no-scrollbar animate-inner-pulse-glow">
               <div className="p-4 border-b border-[#4A5568]/30">
                 <h3 className="font-semibold text-lg flex items-center space-x-2 text-white">
                   <TrendingUp className="h-5 w-5" />
@@ -973,7 +1155,7 @@ export default function HomePage() {
                     key={stream.id}
                     className="
         flex items-center space-x-3 p-2 rounded-md cursor-pointer
-        bg-slate-800                                        // UPDATED: A lighter dark background
+        bg-slate-800                             // UPDATED: A lighter dark background
         shadow-lg shadow-blue-500/20
         hover:bg-slate-700 hover:shadow-blue-400/40         // Hover color is the next shade up
         transition-all duration-300
