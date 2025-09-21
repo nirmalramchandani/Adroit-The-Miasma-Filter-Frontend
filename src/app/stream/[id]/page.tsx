@@ -130,7 +130,7 @@ const recommendedTopics = [
   "Sustainable Energy Solutions",
 ];
 
-const WS_URL = "ws://50.19.176.180:8080/ws/";
+const WS_URL = "wss://50.19.176.180:8080/ws/";
 const USER_AUDIO_SAMPLE_RATE = 16000;
 const AI_SAMPLE_RATE = 24000;
 
