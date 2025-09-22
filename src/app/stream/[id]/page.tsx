@@ -104,36 +104,34 @@ const XCircleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 const trendingStreams = [
   {
     id: 1,
-    title: "Breaking: Economic Summit",
+    title: "Sticker Shock from H-1B visa fees",
     viewers: "12.5K",
     category: "Politics",
   },
   {
     id: 2,
-    title: "Live: Weather Update",
+    title: "Punjab Floods",
     viewers: "8.2K",
     category: "Weather",
   },
   {
     id: 3,
-    title: "International Trade News",
+    title: "Expansion of Global Capability Centers (GCCs)",
     viewers: "5.7K",
     category: "Business",
   },
-  { id: 4, title: "Technology Briefing", viewers: "4.1K", category: "Tech" },
-  {
-    id: 5,
-    title: "Health Department Update",
-    viewers: "3.8K",
-    category: "Health",
+  { id: 4,
+    title: "GST 2.0 Reforms",
+    viewers: "4.1K",
+    category: "Finance" 
   },
 ];
 
 const recommendedTopics = [
-  "Global Economic Outlook",
-  "AI in Healthcare",
-  "Space Exploration Updates",
-  "Sustainable Energy Solutions",
+  "Sticker Shock from H-1B visa fees",
+  "Punjab Floods",
+  "Expansion of Global Capability Centers (GCCs)",
+  "GST 2.0 Reforms",
 ];
 
 const WS_URL = "wss://buildownstuff.cloud/ws/";
@@ -536,7 +534,7 @@ export default function HomePage() {
     if (!overlayNotification) return;
     const timer = setTimeout(() => {
       setOverlayNotification(null);
-    }, 3000);  
+    }, 5000);
     return () => clearTimeout(timer);
   }, [overlayNotification]);
 
@@ -664,7 +662,7 @@ export default function HomePage() {
 
           {/* Button to start stream, with pulsing effect */}
           <button
-            onClick={startStreaming}
+            onClick={handleSkipIntro}
             className="fixed z-[60] bottom-10 left-1/2 -translate-x-1/2 px-8 py-4 text-lg font-bold rounded-full bg-blue-600 text-white shadow-lg border border-blue-500 hover:bg-blue-700 transition-colors duration-300 animate-pulse-grow"
           >
             Start Streaming
