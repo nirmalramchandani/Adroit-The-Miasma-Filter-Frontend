@@ -162,7 +162,6 @@ export default function HomePage() {
   const [showTrendingTopics, setShowTrendingTopics] = useState<boolean>(false);
   const [overlayNotification, setOverlayNotification] =
     useState<Notification | null>(null);
-  const [typedText, setTypedText] = useState<string>("");
 
   const webcamRef = useRef<Webcam | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -196,23 +195,6 @@ export default function HomePage() {
     }, 10000);
     return () => clearTimeout(welcomeTimer);
   }, []);
-
-  useEffect(() => {
-    if (!overlayNotification) return;
-    setTypedText("");
-    const words = overlayNotification.content.split(" ");
-    let currentWordIndex = 0;
-    const typingInterval = setInterval(() => {
-      if (currentWordIndex < words.length) {
-        setTypedText((prev) => prev + words[currentWordIndex] + " ");
-        currentWordIndex++;
-      } else {
-        clearInterval(typingInterval);
-        setTimeout(() => setOverlayNotification(null), 3000);
-      }
-    }, 180);
-    return () => clearInterval(typingInterval);
-  }, [overlayNotification]);
 
   const handleSkipIntro = () => setShowWelcomeOverlay(false);
 
@@ -550,6 +532,14 @@ export default function HomePage() {
     return `${latest.title}: ${latest.content}`;
   };
 
+  useEffect(() => {
+    if (!overlayNotification) return;
+    const timer = setTimeout(() => {
+      setOverlayNotification(null);
+    }, 3000);  
+    return () => clearTimeout(timer);
+  }, [overlayNotification]);
+
   return (
     <div className="relative min-h-screen bg-[#0F1419] text-[#E2E8F0]">
       {showWelcomeOverlay && (
@@ -848,7 +838,7 @@ export default function HomePage() {
           }
         `}
                     >
-                      {typedText}
+                      {overlayNotification.content}
                     </p>
                   </div>
                 </div>
