@@ -301,54 +301,54 @@ export default function HomePage() {
     }
   }, []);
 
-  const playNextAiAudioChunk = useCallback(() => {
-    if (aiAudioQueue.current.length === 0 || !aiAudioContext.current) {
-      isAiAudioPlaying.current = false;
-      return;
-    }
-    isAiAudioPlaying.current = true;
-    const pcmData = aiAudioQueue.current.shift();
-    if (!pcmData) {
-      isAiAudioPlaying.current = false;
-      return;
-    }
-    const float32Data = new Float32Array(pcmData.length);
-    for (let i = 0; i < pcmData.length; i++) {
-      float32Data[i] = pcmData[i] / 32768.0;
-    }
-    const audioBuffer = aiAudioContext.current.createBuffer(
-      1,
-      float32Data.length,
-      AI_SAMPLE_RATE
-    );
-    audioBuffer.copyToChannel(float32Data, 0);
-    const source = aiAudioContext.current.createBufferSource();
-    source.buffer = audioBuffer;
-    source.connect(aiAudioContext.current.destination);
-    source.onended = playNextAiAudioChunk;
-    source.start();
-  }, []);
+  // const playNextAiAudioChunk = useCallback(() => {
+  //   if (aiAudioQueue.current.length === 0 || !aiAudioContext.current) {
+  //     isAiAudioPlaying.current = false;
+  //     return;
+  //   }
+  //   isAiAudioPlaying.current = true;
+  //   const pcmData = aiAudioQueue.current.shift();
+  //   if (!pcmData) {
+  //     isAiAudioPlaying.current = false;
+  //     return;
+  //   }
+  //   const float32Data = new Float32Array(pcmData.length);
+  //   for (let i = 0; i < pcmData.length; i++) {
+  //     float32Data[i] = pcmData[i] / 32768.0;
+  //   }
+  //   const audioBuffer = aiAudioContext.current.createBuffer(
+  //     1,
+  //     float32Data.length,
+  //     AI_SAMPLE_RATE
+  //   );
+  //   audioBuffer.copyToChannel(float32Data, 0);
+  //   const source = aiAudioContext.current.createBufferSource();
+  //   source.buffer = audioBuffer;
+  //   source.connect(aiAudioContext.current.destination);
+  //   source.onended = playNextAiAudioChunk;
+  //   source.start();
+  // }, []);
 
-  const handleAiAudio = useCallback(
-    (base64Data: string) => {
-      try {
-        const rawAudio = atob(base64Data);
-        const rawLength = rawAudio.length;
-        const array = new Uint8Array(new ArrayBuffer(rawLength));
-        for (let i = 0; i < rawLength; i++) {
-          array[i] = rawAudio.charCodeAt(i);
-        }
-        const pcmData = new Int16Array(array.buffer);
-        aiAudioQueue.current.push(pcmData);
-        if (!isAiAudioPlaying.current) {
-          playNextAiAudioChunk();
-        }
-      } catch (e) {
-        console.error("Failed to process AI audio data:", e);
-      }
-    },
-    [playNextAiAudioChunk]
-  );
+  // const handleAiAudio = useCallback(
+  //   (base64Data: string) => {
+  //     try {
+  //       const rawAudio = atob(base64Data);
+  //       const rawLength = rawAudio.length;
+  //       const array = new Uint8Array(new ArrayBuffer(rawLength));
+  //       for (let i = 0; i < rawLength; i++) {
+  //         array[i] = rawAudio.charCodeAt(i);
+  //       }
+  //       const pcmData = new Int16Array(array.buffer);
+  //       aiAudioQueue.current.push(pcmData);
+  //       if (!isAiAudioPlaying.current) {
+  //         playNextAiAudioChunk();
+  //       }
+  //     } catch (e) {
+  //       console.error("Failed to process AI audio data:", e);
+  //     }
+  //   },
+  //   [playNextAiAudioChunk]
+  // );
 
   const stopStreaming = useCallback(() => {
     if (streamVideoInterval.current) clearInterval(streamVideoInterval.current);
@@ -440,7 +440,7 @@ export default function HomePage() {
       webSocket.current.onmessage = (event: MessageEvent) => {
         try {
           const msg = JSON.parse(event.data);
-          if (msg?.type === "audio") handleAiAudio(msg.data);
+          if (msg?.type === "audio") console.log("audio");
           else if (msg?.type === "notification")
             addNotification({
               title: msg.title || "Update",
@@ -495,7 +495,6 @@ export default function HomePage() {
     setupUserAudioStreaming,
     stopStreaming,
     addNotification,
-    handleAiAudio,
   ]);
 
   // --- NEW LOGIC ---: startStreaming now just shows the "Connecting..." screen.
